@@ -1,6 +1,11 @@
 SongSegment
 =============================
 把整首歌根據歌詞檔切成逐字音檔。
+* 執行前建議先確定一下output的directory跟name是否正確。
+
+    ``fold + "/" + fold.split('/')[-1] + ".csv"``
+
+    ``segment.export(save_path + "/" + save_name)``
 
 
 Note

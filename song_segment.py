@@ -29,7 +29,7 @@ def mp3_folder():
         shutil.move(target_dir + all_name[i], ndir_name)
         print(all_name[i])
 
-    return print("folder Done.")
+    return print("Folder Done.")
 
 
 def word_to_csv(fold, full_seq):

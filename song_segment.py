@@ -30,7 +30,8 @@ def mp3_folder():
         shutil.move(target_dir + all_name[i], ndir_name)
         print(all_name[i])
 
-    return print("folder Done.")
+    print("folder Done.")
+    return
 
 
 def word_to_csv(fold, full_seq):
@@ -47,25 +48,26 @@ def word_to_csv(fold, full_seq):
         pinyins = "".join(pinyins)
         pinyins = pinyin(pinyins, style=Style.BOPOMOFO)
 
-        a = 0
-        for i in full_seq:
-            a = a + 1
-            num_of_word = str(a).zfill(3)
-            duration = timing[a-1][1] - timing[a-1][0]
+        for count, i in enumerate(full_seq):
+            num_of_word = str(count+1).zfill(3)
+            duration = timing[count][1] - timing[count][0]
             word = i[2][0]
+            print(word)
             zhuyin = ""
             try:
-                if Lyric.is_chinese(pinyins[a-1][0]):
-                    zhuyin = pinyins[a-1][0]
+                if Lyric.is_chinese(pinyins[count][0]):
+                    zhuyin = pinyins[count][0]
+                else:
+                    zhuyin = ""
             except IndexError:
                 zhuyin = ""
-                print("\r★★★ValueError，歌詞出現非中文字符")
-            try:
-                writer.writerow([num_of_word, duration, word, zhuyin])
             except UnicodeEncodeError:
                 print("★★★'cp950' codec can't encode character 'u5227' in position 8: illegal multibyte sequence")
+                zhuyin = ""
+            writer.writerow([num_of_word, duration, word, zhuyin])
 
-        return print(".csv Done.")
+        print(".csv Done.")
+        return
 
 
 def song_split(fold, full_seq):
@@ -74,18 +76,21 @@ def song_split(fold, full_seq):
     timing = word_segment(full_seq)
 
     a = 0
-    for i in full_seq:
-        save_name = str(a+1).zfill(3) + "." + i[2][0] + ".mp3"
+    for count, i in enumerate(full_seq):
+        save_name = str(count).zfill(3) + "." + i[2][0] + ".mp3"
         save_path = fold
-        segment = sound[timing[a][0]:timing[a][1]]
-        a = a+1
+        if os.path.isfile(save_path + "/" + save_name):
+            print("【Note: 應該轉過檔囉！】")
+            return
+        segment = sound[timing[count-1][0]:timing[count-1][1]]
         segment.export(save_path + "/" + save_name)
         # print(save_path + "/" + save_name)
 
-        p = float("{0:.2f}".format(a / len(full_seq)*100))
+        p = float("{0:.2f}".format(count / len(full_seq)*100))
         print('\r' + "單首切割進度" + str(p) + "%", end='')
 
-    return print("\nSplit Done.")
+    print("\nSplit Done.")
+    return
 
 
 def choose_lyric(song_fold, lyc_fold):
@@ -100,6 +105,7 @@ def choose_lyric(song_fold, lyc_fold):
         indexes = max(lyric_dict.values(), key=lambda v: v[1])[0].split(',')[1:]
     except ValueError:
         print("★★★Value Error，研判是因為沒有歌詞檔")
+        return False
     names = [os.listdir(lyc_fold)[int(index)] for index in indexes]
     chosen_name = max(names, key=lambda _: len(_))
     print("From %d files chose \"%s.\"" % (len(names), chosen_name))
@@ -113,9 +119,10 @@ lyric_dir = "SongSegment/lyric"
 for i in os.listdir("SongSegment/未整理"):
     song_dir = "SongSegment/未整理/" + i
     print(song_dir)
-    lyric_name = lyric_dir + "/" + choose_lyric(song_dir, lyric_dir)
+    if choose_lyric(song_dir, lyric_dir):
+        lyric_name = lyric_dir + "/" + choose_lyric(song_dir, lyric_dir)
     l = Lyric(lyric_name)
-    song_split(song_dir, l.seq)
+    # song_split(song_dir, l.seq)
     word_to_csv(song_dir, l.seq)
 
 end_time = time.time()

@@ -44,27 +44,35 @@ def word_to_csv(fold, full_seq):
 
         pinyins = []
         for i in full_seq:
-            pinyins.append(i[2][0])
+            if i[2][0] == "":
+                pinyins.append(" ")
+            else:
+                pinyins.append(i[2][0])
         pinyins = "".join(pinyins)
+        temp = []
+        for each in pinyins:
+            if len(each) == 1:
+                temp.append(each)
+            else:
+                for _ in each:
+                    temp.append(_)
+        pinyins = temp
         pinyins = pinyin(pinyins, style=Style.BOPOMOFO)
 
         for count, i in enumerate(full_seq):
             num_of_word = str(count+1).zfill(3)
             duration = timing[count][1] - timing[count][0]
-            word = i[2][0]
-            print(word)
-            zhuyin = ""
+            word = i[2].replace(' ', '')
+            # print(word + str(count))
+            print(pinyins[count][0])
+            if Lyric.is_chinese(word):
+                zhuyin = pinyins[count][0]
+            else:
+                zhuyin = ""
             try:
-                if Lyric.is_chinese(pinyins[count][0]):
-                    zhuyin = pinyins[count][0]
-                else:
-                    zhuyin = ""
-            except IndexError:
-                zhuyin = ""
+                writer.writerow([num_of_word, duration, word, zhuyin])
             except UnicodeEncodeError:
-                print("★★★'cp950' codec can't encode character 'u5227' in position 8: illegal multibyte sequence")
-                zhuyin = ""
-            writer.writerow([num_of_word, duration, word, zhuyin])
+                print("★★★★★★★★★")
 
         print(".csv Done.")
         return
@@ -75,7 +83,6 @@ def song_split(fold, full_seq):
     sound = AudioSegment.from_mp3(file_name)
     timing = word_segment(full_seq)
 
-    a = 0
     for count, i in enumerate(full_seq):
         save_name = str(count).zfill(3) + "." + i[2][0] + ".mp3"
         save_path = fold
@@ -84,7 +91,6 @@ def song_split(fold, full_seq):
             return
         segment = sound[timing[count-1][0]:timing[count-1][1]]
         segment.export(save_path + "/" + save_name)
-        # print(save_path + "/" + save_name)
 
         p = float("{0:.2f}".format(count / len(full_seq)*100))
         print('\r' + "單首切割進度" + str(p) + "%", end='')
@@ -116,8 +122,8 @@ def choose_lyric(song_fold, lyc_fold):
 start_time = time.time()
 
 lyric_dir = "SongSegment/lyric"
-for i in os.listdir("SongSegment/未整理"):
-    song_dir = "SongSegment/未整理/" + i
+for file_name in os.listdir("SongSegment/未整理"):
+    song_dir = "SongSegment/未整理/" + file_name
     print(song_dir)
     if choose_lyric(song_dir, lyric_dir):
         lyric_name = lyric_dir + "/" + choose_lyric(song_dir, lyric_dir)

@@ -7,6 +7,7 @@ from pypinyin import pinyin, Style
 from pydub import AudioSegment
 from collections import defaultdict
 
+global zhuyin_dict
 
 def word_segment(full_seq):
     # 回傳每個字的開始時間、結束時間
@@ -38,8 +39,8 @@ def word_to_csv(fold, full_seq):
     # 把每個字的資訊記錄成.csv
     with open(fold + "/" + fold.split('/')[-1] + ".csv", 'w', newline='') as csvfile:
 
-        writer = csv.writer(csvfile)
-        writer.writerow(['# of words', 'duration', 'word', 'pinyin'])
+        # writer = csv.writer(csvfile)
+        # writer.writerow(['# of words', 'duration', 'word', 'pinyin'])
         timing = word_segment(full_seq)
 
         pinyins = []
@@ -59,20 +60,31 @@ def word_to_csv(fold, full_seq):
         pinyins = temp
         pinyins = pinyin(pinyins, style=Style.BOPOMOFO)
 
+        # 不考慮音調start
+        # for count, i in enumerate(pinyins):
+        #     pinyins[count][0] = pinyins[count][0].replace('ˊ', '')
+        #     pinyins[count][0] = pinyins[count][0].replace('ˇ', '')
+        #     pinyins[count][0] = pinyins[count][0].replace('ˋ', '')
+        #     pinyins[count][0] = pinyins[count][0].replace('˙', '')
+        # 不考慮音調end
+
         for count, i in enumerate(full_seq):
             num_of_word = str(count+1).zfill(3)
             duration = timing[count][1] - timing[count][0]
             word = i[2].replace(' ', '')
             # print(word + str(count))
-            print(pinyins[count][0])
+            # print(pinyins[count][0])
             if Lyric.is_chinese(word):
                 zhuyin = pinyins[count][0]
             else:
                 zhuyin = ""
-            try:
-                writer.writerow([num_of_word, duration, word, zhuyin])
-            except UnicodeEncodeError:
-                print("★★★★★★★★★")
+
+            zhuyin_dict[zhuyin] = [zhuyin_dict[zhuyin][0], zhuyin_dict[zhuyin][1] + 1]
+
+            # try:
+            #     writer.writerow([num_of_word, duration, word, zhuyin])
+            # except UnicodeEncodeError:
+            #     print("★★★★★★★★★")
 
         print(".csv Done.")
         return
@@ -114,15 +126,20 @@ def choose_lyric(song_fold, lyc_fold):
         return False
     names = [os.listdir(lyc_fold)[int(index)] for index in indexes]
     chosen_name = max(names, key=lambda _: len(_))
-    print("From %d files chose \"%s.\"" % (len(names), chosen_name))
+    # print("From %d files chose \"%s.\"" % (len(names), chosen_name))
 
     return chosen_name
 
 
 start_time = time.time()
 
+zhuyin_dict = defaultdict(lambda: ["", 0])
 lyric_dir = "SongSegment/lyric"
-for file_name in os.listdir("SongSegment/未整理"):
+process = 1
+for count, file_name in enumerate(os.listdir("SongSegment/未整理")):
+    process += 1
+    if file_name == "desktop.ini":
+        continue
     song_dir = "SongSegment/未整理/" + file_name
     print(song_dir)
     if choose_lyric(song_dir, lyric_dir):
@@ -130,6 +147,20 @@ for file_name in os.listdir("SongSegment/未整理"):
     l = Lyric(lyric_name)
     # song_split(song_dir, l.seq)
     word_to_csv(song_dir, l.seq)
+    length = len(os.listdir("SongSegment/未整理"))
 
+
+    print("總共%d首歌，已處理%d首歌" % (length, process))
+print(sorted(zhuyin_dict.items(), key=lambda d: d[1], reverse=True))
+print(len(zhuyin_dict))
 end_time = time.time()
 print("運行時間：%d 秒" % (end_time-start_time))
+
+# zhuyin_dict = {}
+# for file_name in os.listdir("SongSegment/未整理"):
+#     if file_name == "desktop.ini":
+#         continue
+#     sid = file_name.split('_')[1]
+#     zhuyin_dict[sid] = zhuyin_dict.get(sid, 0) + 1
+# print(sorted(zhuyin_dict.items(), key=lambda d: d[1], reverse=True))
+# print(len(zhuyin_dict))
